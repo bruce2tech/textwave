@@ -1,0 +1,11 @@
+torch
+transformers
+sentence_transformers
+pandas
+mistralai
+faiss-cpu
+numpy
+nltk
+qa-metrics
+Flask
+scikit-learn
