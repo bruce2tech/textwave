@@ -34,7 +34,7 @@ jobs:
 
           cd $GITHUB_WORKSPACE
           cp -rf ./assignment-8-test/* ./${{ github.repository }}/textwave/
-          pip install -r ./${{ github.repository }}/textwave/requirements.txt
+          pip install -r ./${{ github.repository }}/requirements.txt
 
       # Runs unit test
       - name: Runs all unit tests for assignment 8
@@ -53,7 +53,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           cp -rf ./assignment-9-test/* ./${{ github.repository }}/textwave/
-          pip install -r ./${{ github.repository }}/textwave/requirements.txt
+          pip install -r ./${{ github.repository }}/requirements.txt
 
       # Runs unit test
       - name: Runs all unit tests for assignment 9
