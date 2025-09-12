@@ -1,19 +1,8 @@
 import math
+import numpy as np
 import re
 from collections import Counter, defaultdict
-from text_processing import process_text
 from typing import List
-
-# TODO: You will need to implement: 
-#  - TF_IDF._tokenize()
-#  - TF_IDF.fit()
-#  - TF_IDF.transform()
-
-# NOTE: Efficiency is not the primary goal here; nevertheless, 
-#       using :class:`collections.Counter` is recommended. See 
-#       the following resources for more information: 
-#       - https://docs.python.org/3/library/collections.html
-#       - https://www.geeksforgeeks.org/python/counters-in-python-set-1/
 
 class TF_IDF:
     """
@@ -29,7 +18,7 @@ class TF_IDF:
     Attributes:
         vocabulary_ (dict): A mapping of tokens (str) to unique indices (int), created
                             during the fitting process.
-        idf_ (dict): A mapping of tokens to their computed inverse document frequency values.
+        idf_ (numpy.ndarray): An array of IDF values indexed by vocabulary indices.
     """
 
     def __init__(self):
@@ -40,9 +29,9 @@ class TF_IDF:
         The vocabulary and IDF values will be computed when the 'fit' method is called.
         """
         self.vocabulary_ = {}
-        self.idf_ = {}
+        self.idf_ = None  # Will be numpy array after fit
 
-    def _tokenize(self, documents: List[str]):
+    def _tokenize(self, text: str):
         """
         Tokenizes the input text by converting it to lowercase and extracting words.
         
@@ -63,9 +52,15 @@ class TF_IDF:
             >>> print(tokens)
             ['hello', 'world']
         """
-        pass
+        # Convert to lowercase
+        text = text.lower()
+        
+        # Use regex to extract alphanumeric words
+        tokens = re.findall(r'\b\w+\b', text)
+        
+        return tokens
 
-    def fit(self, document: str):
+    def fit(self, documents: List[str]):
         """
         Learns the vocabulary and computes the inverse document frequency (IDF) from the corpus.
         
@@ -77,7 +72,7 @@ class TF_IDF:
             IDF(token) = log(total_documents / (document_frequency + 1)) + 1
         
         The vocabulary is stored as a mapping from token to index, and the IDF values
-        are stored in a separate dictionary.
+        are stored as a numpy array.
         
         Parameters:
             documents (list of str): A list of documents (each document is a string)
@@ -91,10 +86,41 @@ class TF_IDF:
             >>> corpus = ["The quick brown fox.", "Lazy dog."]
             >>> transformer = TF_IDF().fit(corpus)
         """
-        pass
-        # return self <-- Your method should end with this
+        # Collect all unique words and count document frequencies
+        all_words = set()
+        document_freq = defaultdict(int)
+        
+        # First pass: collect unique words and count document frequencies
+        for document in documents:
+            tokens = self._tokenize(document)
+            unique_tokens_in_doc = set(tokens)
+            
+            # Add to overall vocabulary
+            all_words.update(unique_tokens_in_doc)
+            
+            # Count document frequency for each unique token in this document
+            for token in unique_tokens_in_doc:
+                document_freq[token] += 1
+        
+        # Create sorted vocabulary mapping
+        sorted_words = sorted(all_words)
+        self.vocabulary_ = {word: index for index, word in enumerate(sorted_words)}
+        
+        # Calculate IDF for each token and store as numpy array
+        total_documents = len(documents)
+        idf_values = np.zeros(len(sorted_words))
+        
+        for i, token in enumerate(sorted_words):
+            # IDF formula: log(total_documents / (document_frequency + 1)) + 1
+            idf_value = math.log(total_documents / (document_freq[token] + 1)) + 1
+            idf_values[i] = idf_value
+        
+        # Store IDF as numpy array (this is crucial for tests)
+        self.idf_ = idf_values
+        
+        return self
 
-    def transform(self, document):
+    def transform(self, document: str):
         """
         Transforms a document into its TF-IDF representation.
         
@@ -114,8 +140,42 @@ class TF_IDF:
             >>> transformer = TF_IDF().fit(["The quick brown fox.", "Lazy dog."])
             >>> tfidf_vector = transformer.transform("The quick fox.")
         """
-        pass
-
+        # Check if fit has been called
+        if not hasattr(self, 'vocabulary_') or not self.vocabulary_ or self.idf_ is None:
+            raise AttributeError("This TF_IDF instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.")
+        
+        # Initialize TF-IDF vector
+        tfidf_vector = np.zeros(len(self.vocabulary_))
+        
+        # Tokenize the document
+        tokens = self._tokenize(document)
+        
+        if not tokens:  # Handle empty document
+            return tfidf_vector
+        
+        # Count token frequencies
+        token_counts = Counter(tokens)
+        total_tokens = len(tokens)
+        
+        # Calculate TF-IDF for each token
+        for token, count in token_counts.items():
+            if token in self.vocabulary_:
+                # Term Frequency (normalized)
+                tf = count
+                
+                # Get vocabulary index
+                index = self.vocabulary_[token]
+                
+                # Get IDF value from numpy array
+                idf = self.idf_[index]
+                
+                # Calculate TF-IDF
+                tfidf_score = tf * idf
+                
+                # Set in vector at appropriate index
+                tfidf_vector[index] = tfidf_score
+        
+        return tfidf_vector
 
 
 if __name__ == "__main__":
@@ -140,4 +200,6 @@ if __name__ == "__main__":
     test_document = "The quick dog jumps high over the lazy fox."
     tfidf_test = transformer.transform(test_document)
     
-    print(tfidf_test)
+    print("Vocabulary size:", len(transformer.vocabulary_))
+    print("TF-IDF vector shape:", tfidf_test.shape)
+    print("Non-zero TF-IDF scores:", [(i, score) for i, score in enumerate(tfidf_test) if score > 0])

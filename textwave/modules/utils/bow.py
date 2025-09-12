@@ -1,13 +1,9 @@
 import re
 from collections import Counter
 from typing import List
+import numpy as np
 
-from text_processing import process_text
-
-# TODO: You will need to implement: 
-#  - BagOfWords._tokenize()
-#  - BagOfWords.fit()
-#  - BagOfWords.transform()
+# from text_processing import process_text
 
 # NOTE: Efficiency is not the primary goal here; nevertheless, 
 #       using :class:`collections.Counter` is recommended. See 
@@ -48,7 +44,13 @@ class BagOfWords:
         Returns:
             list: A list of word tokens extracted from the text.
         """
-        pass
+        # Convert to lowercase
+        text = text.lower()
+        
+        # Use regex to extract alphanumeric words
+        tokens = re.findall(r'\b\w+\b', text)
+        
+        return tokens
 
     def fit(self, documents: List[str]):
         """
@@ -64,9 +66,19 @@ class BagOfWords:
         Returns:
             Bag_of_Words: The fitted transformer instance with an updated vocabulary_ attribute.
         """
-        pass
-        # return self <-- Your method should end with this
-
+        # Collect all unique words from all documents
+        all_words = set()
+        
+        for document in documents:
+            tokens = self._tokenize(document)
+            all_words.update(tokens)
+        
+        # Sort the unique words and create vocabulary mapping
+        sorted_words = sorted(all_words)
+        self.vocabulary_ = {word: index for index, word in enumerate(sorted_words)}
+        
+        return self
+    
     def transform(self, document: str):
         """
         Transforms a single document into its Bag-of-Words representation.
@@ -82,7 +94,27 @@ class BagOfWords:
             numpy: A numpy array indexing each term (from the learned vocabulary) with its count in the document.
                   Only tokens present in the vocabulary are included.
         """
-        pass
+        # Check if fit has been called (vocabulary should exist and not be empty)
+        if not hasattr(self, 'vocabulary_') or not self.vocabulary_:
+            raise AttributeError("This BagOfWords instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.")
+        
+        # Initialize a zero vector with length equal to vocabulary size
+        bow_vector = np.zeros(len(self.vocabulary_))
+        
+        # Tokenize the document
+        tokens = self._tokenize(document)
+        
+        # Count occurrences of each token
+        token_counts = Counter(tokens)
+        
+        # Fill the bow vector with counts for tokens that exist in vocabulary
+        for token, count in token_counts.items():
+            if token in self.vocabulary_:
+                index = self.vocabulary_[token]
+                bow_vector[index] = count
+        
+        return bow_vector
+
 
 
 if __name__ == "__main__":
@@ -107,4 +139,6 @@ if __name__ == "__main__":
     test_document = "The quick dog jumps high over the lazy fox."
     bow_test = transform.transform(test_document)
     
-    print(bow_test)
+    print("Vocabulary:", transform.vocabulary_)
+    print("BoW vector:", bow_test)
+    print("Non-zero elements:", [(i, count) for i, count in enumerate(bow_test) if count > 0])
