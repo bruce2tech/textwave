@@ -9,3 +9,11 @@ nltk
 qa-metrics
 Flask
 scikit-learn
+Werkzeug
+sympy
+requests
+
+# Dependencies for better performance
+# Uncomment for GPU support:
+# faiss-gpu>=1.7.2
+# torch>=1.11.0+cu113
