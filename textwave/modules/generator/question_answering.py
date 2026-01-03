@@ -37,7 +37,7 @@ class QAGeneratorMistral:
         """
         combined_input = (
             f"Question: {query}\n\n"
-            f"Context: {', '.join(context)}\n\n"
+            # f"Context: {', '.join(context)}\n\n"
         )
         chat_response = self.client.chat.complete(
             model=self.generator_model,
@@ -46,10 +46,7 @@ class QAGeneratorMistral:
                 {
                     "role": "system",
                     "content": (
-                        "You must answer the user's questions **only** based "
-                        "on the provided context. Do not use any external or prior knowledge. "
                         "Provide clear, concise, and full-sentence answers."
-                        "If the context does not mention the answer, respond with 'No context'."
                     )
                 },
                 {
