@@ -206,7 +206,7 @@ class OptimalRetriever:
         return results
 
 class OptimalReRanker:
-    """Optimal re-ranking from Task 3: Sequential re-ranking"""
+    """Sequential re-ranking pipeline for optimal relevance scoring"""
     
     def __init__(self):
         self.reranker = Reranker(type="sequential")

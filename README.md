@@ -39,69 +39,79 @@ TextWave is a Flask-based RAG system that demonstrates advanced information retr
 
 ```
 textwave/
-├── modules/
-│   ├── extraction/          # Document processing and chunking
-│   │   └── preprocessing.py
-│   ├── retrieval/           # Search and reranking
-│   │   ├── index/           # Multiple indexing strategies
-│   │   │   ├── bruteforce.py
-│   │   │   ├── hnsw.py
-│   │   │   └── lsh.py
-│   │   ├── search.py
-│   │   └── reranker.py      # Reranking implementations
-│   ├── generator/           # Answer generation
-│   │   └── question_answering.py
-│   └── utils/               # Utility functions
-│       ├── bow.py
-│       ├── tfidf.py
-│       └── text_processing.py
-└── app.py                   # Flask API server
+├── Dockerfile                      # Docker configuration
+├── README.md                       # This file
+├── CaseStudy.md                    # Comprehensive performance analysis
+├── requirements.txt                # Python dependencies
+├── quality_testing.py              # Quality assurance testing
+├── notebooks/
+│   └── demo_generator.ipynb        # Demo notebook
+└── textwave/
+    ├── app.py                      # Flask API server
+    ├── test_qa.py                  # QA testing utilities
+    ├── storage/                    # Document corpus
+    ├── qa_resources/               # Question-answer datasets
+    └── modules/
+        ├── extraction/             # Document processing
+        │   ├── embedding.py        # Sentence transformer embeddings
+        │   └── preprocessing.py    # Chunking strategies
+        ├── retrieval/              # Search and reranking
+        │   ├── search.py           # FAISS search interface
+        │   ├── reranker.py         # Reranking implementations
+        │   └── index/              # Indexing strategies
+        │       ├── bruteforce.py   # Exact nearest neighbor
+        │       ├── hnsw.py         # FAISS HNSW (approximate)
+        │       ├── lsh.py          # Locality-Sensitive Hashing
+        │       ├── index_strategy_comparison.py
+        │       ├── reranker_comparison.py
+        │       ├── mistral_baseline_evaluation.py
+        │       └── model_comparison_with_RAG.py
+        ├── generator/              # Answer generation
+        │   └── question_answering.py  # Mistral API integration
+        └── utils/                  # Utility functions
+            ├── bow.py              # Bag-of-Words
+            ├── tfidf.py            # TF-IDF vectorization
+            ├── metrics.py          # Evaluation metrics
+            └── text_processing.py  # Text utilities
 ```
 
 ## API Endpoints
 
-### POST /index
-Processes and indexes a document collection.
+### POST /generate
+Generates an answer to a question using the RAG pipeline. Automatically indexes the corpus on first request, retrieves relevant documents, applies reranking, and generates an answer using Mistral AI.
 
-**Parameters:**
-- `corpus_directory`: Path to directory containing documents
-- `chunking_strategy`: "fixed_length" or "sentence"
-- `chunking_parameters`: JSON object with chunk_size and overlap_size
-- `embedding_model_name`: Name of the sentence transformer model
-- `index_strategy`: "bruteforce", "hnsw", or "lsh"
-- `index_parameters`: JSON object with index-specific parameters
-
-**Example:**
-```bash
-curl -X POST http://localhost:5000/index \
-  -H "Content-Type: application/json" \
-  -d '{
-    "corpus_directory": "storage/documents",
-    "chunking_strategy": "fixed_length",
-    "chunking_parameters": {"chunk_size": 500, "overlap_size": 50},
-    "embedding_model_name": "all-MiniLM-L6-v2",
-    "index_strategy": "hnsw"
-  }'
+**Request Body:**
+```json
+{
+  "query": "Your question here"
+}
 ```
 
-### POST /query
-Queries the indexed documents and generates an answer.
-
-**Parameters:**
-- `query`: The question to answer
-- `top_k`: Number of chunks to retrieve (default: 5)
-- `reranking_strategy`: "tfidf", "cross_encoder", "bow", or "sequential"
-- `reranking_parameters`: JSON object with reranking-specific parameters
+**Response:**
+```json
+{
+  "query": "What are the health benefits of green tea?",
+  "answer": "Green tea contains antioxidants that may help...",
+  "num_documents_retrieved": 20,
+  "num_documents_used": 5
+}
+```
 
 **Example:**
 ```bash
-curl -X POST http://localhost:5000/query \
+curl -X POST http://localhost:5000/generate \
   -H "Content-Type: application/json" \
-  -d '{
-    "query": "What are the main features of the system?",
-    "top_k": 5,
-    "reranking_strategy": "cross_encoder"
-  }'
+  -d '{"query": "What are the health benefits of green tea?"}'
+```
+
+### GET /health
+Health check endpoint for monitoring.
+
+**Response:**
+```json
+{
+  "status": "healthy"
+}
 ```
 
 ## Installation
@@ -112,13 +122,23 @@ git clone https://github.com/bruce2tech/textwave.git
 cd textwave
 
 # Install dependencies
-pip install flask sentence-transformers faiss-cpu mistralai numpy scikit-learn
+pip install -r requirements.txt
 
 # Set up your Mistral API key
 export MISTRAL_API_KEY='your-api-key-here'
 
 # Run the Flask server
-python -m textwave.app
+python textwave/app.py
+```
+
+### Docker Deployment
+
+```bash
+# Build the Docker image
+docker build -t textwave .
+
+# Run the container
+docker run -d -p 5000:5000 -e MISTRAL_API_KEY='your-api-key-here' textwave
 ```
 
 ## Configuration
@@ -138,27 +158,22 @@ RERANKING_STRATEGY = "tfidf"
 
 ## Evaluation and Benchmarking
 
-The repository includes comprehensive evaluation scripts:
+The repository includes comprehensive evaluation scripts. For detailed analysis results, see [CaseStudy.md](CaseStudy.md).
 
-### Performance Analysis
-- `chunking_evaluation_results.json` - Comparison of chunking strategies
-- `indexing_comparison_results.json` - Index performance metrics
-- `faiss_indexing_comparison_results.json` - FAISS-specific benchmarks
+> **Note**: JSON result files are generated by running the evaluation scripts and are gitignored due to size. Run the corresponding Python scripts to regenerate them.
 
-### Reranking Analysis
-- `reranking_comparison_results.json` - Reranking strategy comparison
-- `advanced_reranking_comparison_results.json` - Advanced reranking metrics
-- `textwave/modules/retrieval/index/reranker_comparison.py` - Reranking evaluation script
+### Evaluation Scripts
 
-### Model Comparison
-- `textwave/modules/retrieval/index/model_comparison_with_RAG.py` - RAG vs baseline comparison
-- `textwave/modules/retrieval/index/mistral_baseline_evaluation.py` - Baseline model evaluation
-- `textwave/modules/retrieval/index/index_strategy_comparison.py` - Index strategy analysis
+| Script | Output | Description |
+|--------|--------|-------------|
+| `index_strategy_comparison.py` | `faiss_indexing_comparison_results.json` | FAISS index performance benchmarks |
+| `reranker_comparison.py` | `reranking_results.json` | Reranking strategy comparison |
+| `mistral_baseline_evaluation.py` | `mistral_baseline_*_results.json` | Baseline LLM evaluation |
+| `model_comparison_with_RAG.py` | `rag_*_results.json` | RAG vs baseline comparison |
 
 ### Testing Tools
 - `quality_testing.py` - Quality assurance testing
 - `textwave/test_qa.py` - Question answering testing
-- `debug_tfidf.py` - TF-IDF debugging utilities
 
 ## Technologies Used
 
@@ -169,13 +184,44 @@ The repository includes comprehensive evaluation scripts:
 - **Reranking**: Cross-encoders, TF-IDF, BoW
 - **Data Processing**: NumPy, scikit-learn
 
-## Performance Highlights
+## Performance Results
 
-Key findings from benchmarking:
-- **HNSW indexing** provides 10-100x speedup over brute-force with minimal accuracy loss
-- **Cross-encoder reranking** improves answer relevance by 15-25%
-- **Optimal chunk size** varies by document type (400-600 tokens for most documents)
-- **Sequential reranking** (BoW → TF-IDF → Cross-encoder) provides best results
+Based on comprehensive evaluation (see [CaseStudy.md](CaseStudy.md) for detailed analysis):
+
+### Chunking Strategy Comparison
+
+| Strategy | MRR | P@1 | Hit Rate@10 |
+|----------|-----|-----|-------------|
+| **Sentence (5 sent, 200 chars)** | **0.924** | **0.897** | 0.968 |
+| Fixed (512 chars, 64 overlap) | 0.911 | 0.881 | 0.969 |
+| Fixed (1024 chars, 128 overlap) | 0.911 | 0.883 | 0.967 |
+
+### Indexing Strategy Comparison
+
+| Strategy | Search Time | MRR | P@1 |
+|----------|-------------|-----|-----|
+| FAISS Brute Force | 0.613ms | **0.905** | **0.874** |
+| **FAISS HNSW** | **0.428ms** | 0.902 | 0.870 |
+| FAISS LSH | 0.352ms | 0.645 | 0.550 |
+
+### Reranking Effectiveness
+
+| Strategy | MRR | P@1 | Latency |
+|----------|-----|-----|---------|
+| **Cross-Encoder** | **0.897** | **0.881** | 40.25ms |
+| Sequential (TF-IDF → Cross-Encoder) | 0.893 | 0.879 | 20.87ms |
+| TF-IDF | 0.858 | 0.822 | 1.70ms |
+| Baseline (no reranking) | 0.844 | 0.807 | 0ms |
+
+### RAG Enhancement Impact
+
+| Model | System | Semantic Similarity | Improvement |
+|-------|--------|---------------------|-------------|
+| Mistral-Small | Baseline | 0.112 | - |
+| Mistral-Small | **RAG** | **0.156** | **+38.4%** |
+| Mistral-Large | Baseline | 0.149 | - |
+
+**Key Finding**: RAG makes smaller, cheaper models competitive with larger models. Small+RAG (0.156) outperforms Large baseline (0.149) at lower cost.
 
 ## Project Context
 
@@ -236,10 +282,14 @@ This project is for educational and portfolio purposes.
 ## Requirements
 
 See `requirements.txt` for full dependency list. Key requirements:
-- Python 3.8+
+- Python 3.11+
 - Flask
 - sentence-transformers
+- transformers
+- torch
 - faiss-cpu
 - mistralai
 - numpy
 - scikit-learn
+- nltk
+- qa-metrics
