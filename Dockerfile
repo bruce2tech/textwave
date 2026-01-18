@@ -18,7 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY textwave/ ./textwave/
-COPY storage/ ./storage/
 
 # Set environment variables
 ENV FLASK_APP=textwave/app.py

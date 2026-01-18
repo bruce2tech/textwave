@@ -366,6 +366,87 @@ def generate_answer_with_requests(query, context):
     except Exception as e:
         return f"Request failed: {e}"
 
+@app.route("/upload", methods=["POST"])
+def upload_document():
+    """
+    Upload a new document to the corpus and rebuild the index.
+
+    This endpoint accepts a POST request with a JSON body containing:
+    - "text": The document text to add (required)
+    - "filename": Optional filename (will be auto-generated if not provided)
+
+    Example curl command:
+    curl -X POST http://localhost:5000/upload \
+         -H "Content-Type: application/json" \
+         -d '{"text": "Green tea contains antioxidants called catechins..."}'
+
+    :return: JSON response confirming the upload.
+    """
+    global faiss_index
+
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Content-Type must be application/json"}), 400
+
+        data = request.get_json()
+        if not data or "text" not in data:
+            return jsonify({"error": "Request body must contain 'text' field"}), 400
+
+        text = data.get("text", "").strip()
+        if not text:
+            return jsonify({"error": "Text cannot be empty"}), 422
+
+        # Generate filename if not provided
+        filename = data.get("filename", "").strip()
+        if not filename:
+            import time
+            filename = f"upload_{int(time.time())}.txt.clean"
+        elif not filename.endswith(".txt.clean"):
+            filename = filename + ".txt.clean"
+
+        # Find the storage directory
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), "storage/"),
+            "textwave/storage/",
+            "storage/",
+        ]
+
+        storage_dir = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                storage_dir = path
+                break
+
+        if not storage_dir:
+            # Create storage directory if it doesn't exist
+            storage_dir = os.path.join(os.path.dirname(__file__), "storage/")
+            os.makedirs(storage_dir, exist_ok=True)
+
+        # Save the document
+        file_path = os.path.join(storage_dir, filename)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+        print(f"Saved document to {file_path}")
+
+        # Reset the index so it will be rebuilt with the new document
+        faiss_index = None
+
+        # Reinitialize the index
+        initialize_index()
+
+        return jsonify({
+            "status": "success",
+            "message": f"Document uploaded and index rebuilt",
+            "filename": filename,
+            "text_length": len(text)
+        })
+
+    except Exception as e:
+        print(f"Error uploading document: {str(e)}")
+        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+
+
 @app.route("/health", methods=["GET"])
 def health_check():
     """Health check endpoint."""

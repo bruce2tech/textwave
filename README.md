@@ -111,6 +111,25 @@ curl -X POST http://localhost:5000/generate \
 }
 ```
 
+### POST /upload
+Upload a new document to the corpus. The index is automatically rebuilt to include the new content.
+
+```bash
+curl -X POST http://localhost:5000/upload \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Your document content here...", "filename": "optional_name"}'
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "message": "Document uploaded and index rebuilt",
+  "filename": "upload_1737200000.txt.clean",
+  "text_length": 350
+}
+```
+
 ### GET /health
 Health check endpoint.
 
@@ -184,7 +203,7 @@ For deployment at scale:
 
 - Single embedding model (all-MiniLM-L6-v2); domain-specific fine-tuning may improve retrieval
 - No query expansion or reformulation; complex queries may benefit from decomposition
-- Static corpus; production systems need incremental index updates
+- The `/upload` endpoint rebuilds the entire index on each upload; for high-volume ingestion, consider batch uploads or incremental indexing
 
 ## Technologies
 
